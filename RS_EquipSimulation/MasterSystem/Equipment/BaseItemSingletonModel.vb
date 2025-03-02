@@ -1,17 +1,35 @@
-﻿Imports RS_EquipSimulation.MasterSystem.Common
+﻿Imports System.IO
 Imports RS_EquipSimulation.Common.Singleton
+Imports RS_EquipSimulation.MasterSystem.Common
 Imports RS_EquipSimulation.MasterSystem.Equipment
+Imports RS_EquipSimulation.MasterSystem.Update
 
 Public Class BaseItemSingletonModel
     Inherits SingletonJsonBase(Of BaseItemSingletonModel)
 
     Private _baseItemDataList As List(Of BaseItemModel)
+    Private Shared _updating As Boolean = False
 
     Protected Overrides ReadOnly Property FilePath As String
         Get
-            Return InputFileConfig.BaseItemFilePath
+            ' 現在使用中のファイルパスを取得
+            Return GetCurrentFilePath()
         End Get
     End Property
+
+    ' 現在使用中のファイルパスを取得
+    Private Function GetCurrentFilePath() As String
+        Dim directory = Path.GetDirectoryName(InputFileConfig.BaseItemFilePath)
+        Dim fileName = Path.GetFileNameWithoutExtension(InputFileConfig.BaseItemFilePath)
+        Dim currentPath = Path.Combine(directory, $"{fileName}_current.json")
+
+        ' current.jsonが存在しない場合は元のパスを返す
+        If Not File.Exists(currentPath) Then
+            Return InputFileConfig.BaseItemFilePath
+        End If
+
+        Return currentPath
+    End Function
 
     Protected Overrides Function GetDataType() As Type
         Return GetType(List(Of BaseItemModel))
@@ -19,7 +37,43 @@ Public Class BaseItemSingletonModel
 
     Protected Overrides Sub SetLoadedData(data As Object)
         _baseItemDataList = DirectCast(data, List(Of BaseItemModel))
+
+        ' データ再読み込みイベントを発行
+        RaiseEvent DataReloaded(Me, EventArgs.Empty)
     End Sub
+
+    ' 初期化処理のオーバーライド
+    Protected Overrides Sub SafeInitialize()
+        MyBase.SafeInitialize()
+
+        ' マスターデータ更新マネージャーのイベント登録
+        AddHandler MasterDataUpdateManager.Instance.ItemsFileUpdated, AddressOf OnItemsFileUpdated
+    End Sub
+
+    ' items.jsonファイル更新イベントハンドラ
+    Private Sub OnItemsFileUpdated(sender As Object, e As EventArgs)
+        ' データを再読み込み
+        ReloadData()
+    End Sub
+
+    ' データ再読み込みメソッド
+    Public Function ReloadData() As Boolean
+        If _updating Then Return False
+
+        Try
+            _updating = True
+            LoadFromFile()
+            Return True
+        Catch ex As Exception
+            Debug.WriteLine($"ベースアイテムデータの再読み込みに失敗: {ex.Message}")
+            Return False
+        Finally
+            _updating = False
+        End Try
+    End Function
+
+    ' データ再読み込みイベント
+    Public Shared Event DataReloaded As EventHandler
 
     ' 基本的な検索メソッド
     Public Function GetItemByName(name As String) As BaseItemModel

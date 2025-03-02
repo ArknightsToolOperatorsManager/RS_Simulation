@@ -8,6 +8,7 @@ Imports RS_EquipSimulation.CharacterSystem.Operation.Costume
 Imports System.ComponentModel
 Imports RS_EquipSimulation.CreatorSystem.Equipment
 Imports RS_EquipSimulation.CreatorSystem.Creature
+Imports RS_EquipSimulation.MasterSystem.Update
 
 Public Class CharacterForm
     Private WithEvents _viewModel As New CharacterViewModel()
@@ -38,6 +39,9 @@ Public Class CharacterForm
     End Sub
 
     Private Sub CharacterForm_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        ' マスターデータ更新マネージャーの初期化
+        InitializeMasterDataUpdater()
+
         ' キャラクター選択UIの初期化
         InitializeCharacterSelectorUI()
 
@@ -279,5 +283,18 @@ Public Class CharacterForm
         ' リソースの解放
         DisposeChildForms()
         _viewModel.Dispose()
+    End Sub
+
+    ''' <summary>
+    ''' マスターデータ更新マネージャーの初期化
+    ''' </summary>
+    Private Shared Sub InitializeMasterDataUpdater()
+        Try
+            ' 更新マネージャーの初期化
+            MasterDataUpdateManager.Instance.InitializeOnStartup()
+        Catch ex As Exception
+            Debug.WriteLine($"マスターデータ更新マネージャーの初期化に失敗: {ex.Message}")
+            ' エラーがあっても続行（ローカルファイルを使用）
+        End Try
     End Sub
 End Class

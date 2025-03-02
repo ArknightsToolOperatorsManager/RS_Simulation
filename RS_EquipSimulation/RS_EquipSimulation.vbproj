@@ -63,8 +63,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="CharacterSystem\Calcuration\" />
     <Folder Include="GuildSystem\" />
   </ItemGroup>
+
+	<Target Name="PostPublish" AfterTargets="Publish">
+		<Exec Command="$(ProjectDir)SignApp.bat &quot;$(PublishDir)$(TargetName).exe&quot;" />
+	</Target>
 
 </Project>
